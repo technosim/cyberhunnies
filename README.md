@@ -39,6 +39,7 @@ docker run -d -p 8080:80 cyberhunnies
 
 - `-d` runs it in detached mode.
 - `-p 8080:80` maps port **80 inside the container** to **8080 on your host** (adjust as needed).
+- Open in browser 127.0.0.1:8080
 
 ---
 
