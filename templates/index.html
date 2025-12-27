@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Do something nice today</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #222;
+      color: white;
+    }
+
+    .container {
+      text-align: center;
+    }
+
+    .wheel {
+      height: 60px;
+      overflow: hidden;
+      border: 2px solid white;
+      width: 600px;
+      margin: 20px auto;
+      font-size: 24px;
+      position: relative;
+    }
+
+    .items {
+      display: block;
+      transition: transform 2s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .item {
+      height: 50px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 32px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+#result {
+  color: #ff79c6; /* soft pink / pretty contrast on dark grey */
+  font-size: 28px;
+  margin-top: 20px;
+  font-weight: bold;
+  text-shadow: 1px 1px 2px #000; /* optional: subtle shadow for depth */
+}
+
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Do something nice today</h1>
+    <div class="wheel">
+      <div id="items" class="items"></div>
+    </div>
+    <button onclick="spin()">Spin</button>
+    <h2 id="result"></h2>
+  </div>
+
+<script>
+const itemsDiv = document.getElementById("items");
+const resultDiv = document.getElementById("result");
+let options = [];
+let itemHeight = 50; // must match .item height in CSS
+let placeholderCycle = ["???", "...", "???", "❤"];
+let blinkInterval;
+
+// Load options from Flask
+fetch("/options")
+  .then(res => res.json())
+  .then(data => {
+    options = data;
+    showPlaceholder(); // start with blinking placeholders
+  });
+
+// Show blinking placeholder animation
+function showPlaceholder() {
+  itemsDiv.innerHTML = "";
+  let repeats = 50; // enough items to scroll visually
+  for (let i = 0; i < repeats * options.length; i++) {
+    let div = document.createElement("div");
+    div.className = "item";
+    div.innerText = placeholderCycle[0];
+    itemsDiv.appendChild(div);
+  }
+
+  let index = 0;
+  blinkInterval = setInterval(() => {
+    index = (index + 1) % placeholderCycle.length;
+    for (let div of itemsDiv.children) {
+      div.innerText = placeholderCycle[index];
+    }
+  }, 600); // slower: change every 600ms
+}
+
+// Populate items for actual spin
+function populateItems() {
+  clearInterval(blinkInterval); // stop placeholder animation
+  itemsDiv.innerHTML = "";
+  let repeats = 50;
+  for (let i = 0; i < repeats * options.length; i++) {
+    let opt = options[i % options.length];
+    let div = document.createElement("div");
+    div.className = "item";
+    div.innerText = opt;
+    itemsDiv.appendChild(div);
+  }
+
+  // Start somewhere in the middle so we can spin multiple loops
+  let resetIndex = options.length;
+  itemsDiv.style.transition = "none";
+  itemsDiv.style.transform = `translateY(${-resetIndex * itemHeight}px)`;
+}
+
+// Spin the wheel
+function spin() {
+  if (!options.length) return;
+
+  populateItems(); // replace placeholders with real options
+
+  fetch("/spin")
+    .then(res => res.json())
+    .then(data => {
+      let choice = data.result;
+      let index = options.indexOf(choice);
+      let loops = 10 + Math.floor(Math.random() * 5);
+      let finalIndex = loops * options.length + index;
+      let offset = -finalIndex * itemHeight;
+
+      // Force reflow for transition
+      itemsDiv.style.transition = "none";
+      itemsDiv.offsetHeight;
+      itemsDiv.style.transition = "transform 2s cubic-bezier(0.25, 1, 0.5, 1)";
+      itemsDiv.style.transform = `translateY(${offset}px)`;
+
+      setTimeout(() => {
+        resultDiv.innerText = "Result: " + choice;
+
+        // Reset transform for next spin
+        itemsDiv.style.transition = "none";
+        let resetIndex = options.length + index;
+        itemsDiv.style.transform = `translateY(${-resetIndex * itemHeight}px)`;
+      }, 2200);
+    });
+}
+</script>
+
+
+
+
+
+</body>
+</html>
